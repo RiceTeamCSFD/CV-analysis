@@ -1,0 +1,79 @@
+from ij import IJ, ImagePlus
+from ij.plugin.filter import ParticleAnalyzer
+from ij.process import ImageProcessor
+from ij.plugin.filter import EDM
+from ij.measure import ResultsTable
+import os
+
+def count_cells(image_path):
+    imp = IJ.openImage(image_path)
+
+    # Convert image to 8-bit
+    IJ.run(imp, "8-bit", "")
+    # Invert the image
+    IJ.run(imp, "Invert", "")
+    # Apply adaptive thresholding
+    # IJ.run(imp, "Auto Local Threshold", "method=Phansalkar radius=15 parameter_1=0 parameter_2=0 white stack")
+    # Convert to binary mask
+    IJ.run(imp, "Convert to Mask", "")
+    # Get the binary mask
+    IJ.setAutoThreshold(imp, "Default dark")
+    binary_mask = imp.duplicate()
+    # Apply watershed transform to separate touching particles
+    watershed = EDM()
+    watershed.toWatershed(imp.getProcessor())
+
+    # Perform size-based filtering to remove small particles
+    IJ.run(imp, "Analyze Particles...", "size=50-Infinity circularity=0.5-1.0 display exclude clear add")
+
+    # Display the segmented image with overlays
+    #imp_overlay = imp.createImagePlus()
+    #imp_overlay.setOverlay(imp.getOverlay())
+    imp_overlay.show()
+
+    # Display the binary mask
+    binary_mask.show()
+
+    # Perform particle analysis to count cells
+    rt = ResultsTable()
+    pa = ParticleAnalyzer(ParticleAnalyzer.SHOW_OUTLINES | ParticleAnalyzer.SHOW_RESULTS, ParticleAnalyzer.AREA | ParticleAnalyzer.CIRCULARITY, rt, 1000, 10000, 0.25, 1.0)
+    pa.analyze(imp)
+
+    # Filter particles based on roundness
+    roundness_col = rt.getColumnIndex("Round")
+    filtered_indices = [i for i in range(rt.size()) if rt.getValueAsDouble(roundness_col, i) >= 0.8]
+
+    # Count cells with roundness >= 0.8
+    cell_count = len(filtered_indices)
+
+    # Display the ResultsTable
+    rt.show("Cell Count Results for " + os.path.basename(image_path))
+
+    # Close the image to release resources
+    imp.close()
+
+    return cell_count
+
+def process_folder(folder_path):
+    total_cell_count = 0
+    # Get the list of files in the folder
+    files = os.listdir(folder_path)
+
+    # Process each file in the folder
+    for file in files:
+        # Check if the file is an image
+        if file.lower().endswith(('.png', '.jpg', '.tif')):
+            # Create the full path to the image
+            image_path = os.path.join(folder_path, file)
+
+            # Process the image and count cells
+            print("Processing image: %s" % image_path)
+            cell_count = count_cells(image_path)
+            total_cell_count += cell_count
+            print("Cell count for %s: %d" % (file, cell_count))
+
+    print("Total cell count for all images: %d" % total_cell_count)
+
+# Example usage
+folder_path = r"C:\Users\melen\OneDrive\Desktop\Senior Design\Nucleus_Test"
+process_folder(folder_path)
