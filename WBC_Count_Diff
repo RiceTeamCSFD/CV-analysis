@@ -1,0 +1,78 @@
+// Prompt the user to select an image file
+open_path = File.openDialog("Select an image file");
+
+// Check if an image file has been selected
+if (open_path != "") {
+    // Get the name of the selected file
+    file_name = File.getName(open_path);
+    
+    // Step 1: Gaussian Blur and Split Channels
+    open(file_name);
+    run("Gaussian Blur...", "sigma=2");
+    run("Split Channels");
+
+    // Step 2: Thresholding and Analyzing Cells 64 230
+    selectImage(file_name + " (blue)");
+    run("Duplicate...", "title=Cells");
+    selectImage("Cells");
+    setAutoThreshold("Default dark");
+    run("Enhance Contrast", "saturated=0.35"); // Contrast enhancement
+    run("Threshold...");
+    setThreshold(0, 225);
+    setOption("BlackBackground", true);
+    run("Convert to Mask");
+    run("Watershed");
+    run("Close");
+    run("Set Measurements...", "area bounding area_fraction limit redirect=None decimal=2");
+
+    // Analyze Cells and get Total Cell Count
+    roiManager("reset");
+    run("Fill Holes");
+    run("Close-");
+	run("Dilate");
+	run("Erode");
+    run("Analyze Particles...", "size=10000-Infinity circularity=0.45-1.00 add");
+    roiManager("Show All with labels");
+    TotalCellCount = nResults;
+
+    // Step 3: Thresholding and Analyzing Nuclei 132
+    selectImage(file_name + " (green)");
+    run("Duplicate...", "title=Nuclei");
+    selectImage("Nuclei");
+    setAutoThreshold("Default dark");
+    run("Threshold...");
+    setThreshold(0, 180);
+    setOption("BlackBackground", true);
+    run("Convert to Mask");
+    run("Watershed");
+
+    // Step 4: Loop through ROIs and count nuclei
+    n = roiManager("count");
+    lymphocyteCount = 0;
+    polymorphCount = 0;
+    Segmented_Cells = n - TotalCellCount;
+    for (i = Segmented_Cells; i < n; i++) {
+        roiManager("select", i);
+        run("Analyze Particles...", "size=1500-Infinity circularity=0.50-1.00 summarize add");
+        vals = Table.getColumn("Count");
+        nucleiCount = vals[0];
+        close("Summary");
+        
+        if (nucleiCount == 1 || nucleiCount == 0) {
+            lymphocyteCount++;
+        } else if (nucleiCount > 1) {
+            polymorphCount++;
+        }
+    }
+    
+    // Calculate WBC differential
+    Lymphocyte_percent = lymphocyteCount / TotalCellCount *100;
+    Polymorph_percent = polymorphCount / TotalCellCount *100;
+    
+    // Print the counts
+    print("Total Cell Count: " + TotalCellCount);
+    print("Polymorph %: " + Polymorph_percent);
+    print("Lymphocyte %: " + Lymphocyte_percent);
+} else {
+    print("No file selected. Exiting macro.");
+}
