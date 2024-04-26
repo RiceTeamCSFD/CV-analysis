@@ -154,11 +154,17 @@ class Ui_MainWindow(object):
         self.started = True
         self.captureImage.setEnabled(True)
 
+        # Clear any past results
+        self.WBCcountResult.setText('--')
+        self.polymorphResult.setText('--')
+        self.lymphocyteResult.setText('--')
+        self.GramStainResultResult.setText('--')
+
         # Update instructions
         self.updateInstructions('Focus the image using the knob on the left. Once sharp, press "Capture Image."')
 
         # Connect to USB camera (CAP_DSHOW opens camera instantly, won't work on Mac)
-        camera = cv2.VideoCapture(0, cv2.CAP_DSHOW)
+        camera = cv2.VideoCapture(1, cv2.CAP_DSHOW)
 
         # Initialize camera parameters
         camera.set(cv2.CAP_PROP_FRAME_WIDTH, 2592)
