@@ -5,6 +5,8 @@ from skimage import measure, morphology
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
 from scipy import ndimage as ndi
+import os
+import matplotlib.pyplot as plt
 
 def find_regions(img):
     # Convert image to grayscale
@@ -14,7 +16,7 @@ def find_regions(img):
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
 
     # Apply binary thresholding for WBCs
-    (T, WBCthresh) = cv2.threshold(blurred, 220, 255, cv2.THRESH_BINARY_INV)
+    (T, WBCthresh) = cv2.threshold(blurred, 235, 255, cv2.THRESH_BINARY_INV)
 
     # Morphological processing for WBCs
     WBCclosed1 = morphology.closing(WBCthresh, morphology.disk(15))
@@ -35,9 +37,9 @@ def find_regions(img):
     possible_WBCs = measure.regionprops(WBClabels)
 
     # Define minimum and maximum size for filtering for WBCs
-    WBC_min = 10000  # Minimum expected WBC size
-    WBC_max = 60000  # Maximum expected WBC size
-    WBC_min_circularity = 0.7
+    WBC_min = 7500  # Minimum expected WBC size
+    WBC_max = 50000  # Maximum expected WBC size
+    WBC_min_circularity = 0.6
 
     # Filter regions by size for WBCs
     filtered_WBCs = np.zeros(WBClabels.shape, dtype=np.uint8)
@@ -49,11 +51,9 @@ def find_regions(img):
             WBC_circularity = (4 * np.pi * WBC_area) / (WBC_perimeter ** 2)
         if WBC_min < WBC_area < WBC_max and WBC_circularity > WBC_min_circularity:
             filtered_WBCs[WBClabels == region.label] = region.label
-            #if WBC_min < WBC_area < WBC_max and WBC_circularity > WBC_min_circularity:
-                #filtered_WBCs[WBClabels == region.label] = 1 # ********Investigate later*******
 
     # Apply binary thresholding for nuclei
-    (T, nucThresh) = cv2.threshold(blurred, 150, 255, cv2.THRESH_BINARY_INV) #Line was changed *******
+    (T, nucThresh) = cv2.threshold(blurred, 150, 235, cv2.THRESH_BINARY_INV) 
 
     # Morphological processing for nuclei
     nucclosed1 = morphology.closing(nucThresh, morphology.disk(3))
@@ -71,25 +71,33 @@ def find_regions(img):
     possible_nucs = measure.regionprops(nuclabels)
 
     # Define minimum and maximum size for filtering for nuclei
-    nuc_min = 2000  # Minimum expected nucleus size
-    nuc_max = 50000  # Maximum expected nucleus size
+    nuc_min = 1000  # Minimum expected nucleus size
+    nuc_max = 15000  # Maximum expected nucleus size
+    nuc_min_circularity = 0.60
 
     # Filter regions by size for nuclei
     filtered_nucs = np.zeros(nuclabels.shape, dtype=np.uint8)
     for region in possible_nucs:
         nuc_area = region.area
-        if nuc_min < nuc_area < nuc_max:
+        nuc_perimeter = region.perimeter
+        if nuc_perimeter != 0:  # Check if WBC_perimeter is not zero
+            nuc_circularity = (4 * np.pi * nuc_area) / (nuc_perimeter ** 2)
+        if nuc_min < nuc_area < nuc_max and nuc_circularity > nuc_min_circularity:
             filtered_nucs[nuclabels == region.label] = region.label
     
     # Plot WBC and nucleus thresholds and watershed regions
     fig, ax = plt.subplots(2, 2, figsize=(15, 5), sharex=True, sharey=True)
     ax[0, 0].imshow(WBCdilated2, cmap=plt.cm.gray)
-    ax[0, 0].set_title('WBC Threshold')
+    ax[0, 0].axis(False)
+    ax[0, 0].set_title('WBC Threshold') #Remove
     ax[0, 1].imshow(filtered_WBCs, cmap=plt.cm.nipy_spectral)
+    ax[0, 1].axis(False)
     ax[0, 1].set_title('Detected WBCs')
     ax[1, 0].imshow(nucfilled, cmap=plt.cm.gray)
+    ax[1, 0].axis(False)
     ax[1, 0].set_title('Nucleus Threshold')
     ax[1, 1].imshow(nuclabels, cmap=plt.cm.nipy_spectral)
+    ax[0, 0].axis(False)
     ax[1, 1].set_title('Detected Nuclei')
     plt.show()
 
@@ -128,8 +136,15 @@ def WBCcount(image):
             print(f"No nuclei found for WBC with label {WBC_region.label}")
 
     total_WBC = poly + lymph
-    print(f"Detected Polymorphs: {poly}, Detected Lymphocytes: {lymph}")
-    print(f"Total WBC count: {total_WBC}")
+    #print(f"Total WBC count: {total_WBC}")
+    if total_WBC != 0:
+        poly_percent = (poly / total_WBC) * 100
+        lymph_percent = (lymph / total_WBC) * 100
+    else:
+        poly_percent = 0
+        lymph_percent = 0
+    print('Polymorph %: {}'.format(poly_percent))
+    print('Lymphocyte %: {}'.format(lymph_percent))
 
     return poly, lymph
 
@@ -140,7 +155,7 @@ def gramStatus(image):
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
     
     # Apply binary thresholding
-    _, threshInv = cv2.threshold(blurred, 200, 255, cv2.THRESH_BINARY_INV)
+    _, threshInv = cv2.threshold(blurred, 190, 255, cv2.THRESH_BINARY_INV)
     
     # Create a mask from the binary thresholded image
     cell_mask = np.zeros_like(threshInv)
@@ -160,11 +175,16 @@ def gramStatus(image):
     sampled_hsv = masked_hsv_flat[cell_mask_flat > 0]
 
     hist = cv2.calcHist([sampled_hsv], [0], None, [90], [90, 180])
-    
-    purple_upper = 125
-    purple_lower = 100
-    pink_upper = 150
-    pink_lower = 125
+
+    #plt.plot(hist)
+    #plt.xlabel('Pixel Hue Value')
+    #plt.ylabel('Frequency')
+    #plt.show()
+
+    purple_upper = 45
+    purple_lower = 5
+    pink_upper = 60
+    pink_lower = 45
 
     purple_char = np.sum(hist[purple_lower-90:purple_upper-90])
     pink_char = np.sum(hist[pink_lower-90:pink_upper-90])
@@ -178,29 +198,52 @@ def gramStatus(image):
 
     return bac_status
 
+def process_image(image_path):
+    image = cv2.imread(image_path)
+    if image is None:
+        print(f"Failed to load {image_path}")
+        return None  # Return None if the image cannot be loaded
+    
+    poly, lymph = WBCcount(image)
+    total = poly + lymph
 
-'''
-Main code starts here
-'''
+    if total != 0:
+        poly_percent = (poly / total) * 100
+        lymph_percent = (lymph / total) * 100
+    else:
+        poly_percent = 0
+        lymph_percent = 0
 
-# Open image
-filename = "C:\\Users\\melen\\OneDrive\\Desktop\\Senior_Design\\Nucleus_Test\\WBed40x_wbcEDTA_BCpos2_pic5.jpeg"
-image = cv2.imread(filename)
+    bac_status = gramStatus(image)
+    return {
+        'filename': os.path.basename(image_path),
+        'total_WBC': total,
+        'poly_percent': poly_percent,
+        'lymph_percent': lymph_percent,
+        'gram_status': bac_status
+    }
 
-# Perform WBC count/differential
-poly, lymph = WBCcount(image)
-total = poly + lymph
-print('WBC Count: {} cells'.format(total))
+# Directory containing images
+folder_path = "C:\\Users\\melen\\OneDrive\\Desktop\\Senior_Design\\4_26_RRneg"
+image_extensions = ['.jpeg', '.jpg', '.png']
 
-if total != 0:
-    poly_percent = (poly / total) * 100
-    lymph_percent = (lymph / total) * 100
-else:
-    poly_percent = 0
-    lymph_percent = 0
-print('Polymorph %: {} %'.format(poly_percent))
-print('Lymphocyte %: {} %'.format(lymph_percent))
+results = []  # List to hold all results
 
-# Perform bacteria search
-bac_status = gramStatus(image)
-print('Gram Stain Results: {}'.format(bac_status))
+# Iterate over all files in the directory
+for filename in os.listdir(folder_path):
+    if any(filename.lower().endswith(ext) for ext in image_extensions):
+        image_path = os.path.join(folder_path, filename)
+        print(f'Processing {filename}')
+        result = process_image(image_path)
+        if result:
+            results.append(result)
+
+# Print out the total results or save them to a file
+for result in results:
+    print(result)
+
+# Optional: Summarize total counts or averages
+total_WBCs = sum(r['total_WBC'] for r in results)
+print(f'Total WBC Count across all images: {total_WBCs}')
+concentration = (total_WBCs / 0.69609575) * 39.07905965
+print(f'Total WBC concentration: {concentration} cells/uL')
