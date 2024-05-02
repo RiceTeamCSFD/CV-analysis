@@ -5,7 +5,9 @@ from skimage import measure, morphology
 from skimage.segmentation import watershed
 from skimage.feature import peak_local_max
 from scipy import ndimage as ndi
+from scipy import stats
 from datetime import datetime
+import os
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QImage
@@ -14,123 +16,146 @@ from PyQt5.QtGui import QImage
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1032, 615)
+        MainWindow.resize(1100, 700)
+        MainWindow.setMinimumSize(QtCore.QSize(1100, 700))
         font = QtGui.QFont()
         font.setPointSize(8)
         MainWindow.setFont(font)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.widget = QtWidgets.QWidget(self.centralwidget)
-        self.widget.setGeometry(QtCore.QRect(12, 12, 992, 551))
+        self.widget.setGeometry(QtCore.QRect(14, 11, 1070, 616))
         self.widget.setObjectName("widget")
         self.gridLayout = QtWidgets.QGridLayout(self.widget)
         self.gridLayout.setContentsMargins(0, 0, 0, 0)
         self.gridLayout.setObjectName("gridLayout")
         self.startCamera = QtWidgets.QPushButton(self.widget)
-        self.startCamera.setObjectName("startCamera")
-        self.gridLayout.addWidget(self.startCamera, 0, 0, 1, 1)
-        spacerItem = QtWidgets.QSpacerItem(488, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem, 0, 1, 1, 1)
-        self.captureImage = QtWidgets.QPushButton(self.widget)
         font = QtGui.QFont()
         font.setPointSize(14)
-        self.captureImage.setFont(font)
-        self.captureImage.setObjectName("captureImage")
-        self.gridLayout.addWidget(self.captureImage, 0, 2, 2, 4)
+        self.startCamera.setFont(font)
+        self.startCamera.setObjectName("startCamera")
+        self.gridLayout.addWidget(self.startCamera, 0, 0, 2, 1)
+        spacerItem = QtWidgets.QSpacerItem(328, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem, 0, 1, 1, 1)
+        self.captureWBCImage = QtWidgets.QPushButton(self.widget)
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        self.captureWBCImage.setFont(font)
+        self.captureWBCImage.setObjectName("captureWBCImage")
+        self.gridLayout.addWidget(self.captureWBCImage, 0, 2, 2, 5)
         self.runAnalysis = QtWidgets.QPushButton(self.widget)
         font = QtGui.QFont()
         font.setPointSize(14)
         self.runAnalysis.setFont(font)
         self.runAnalysis.setObjectName("runAnalysis")
-        self.gridLayout.addWidget(self.runAnalysis, 0, 6, 2, 1)
+        self.runAnalysis.setMinimumSize(QtCore.QSize(127, 80))
+        self.gridLayout.addWidget(self.runAnalysis, 1, 7, 3, 2)
         self.instructionLabel = QtWidgets.QLabel(self.widget)
+        self.instructionLabel.setMinimumSize(QtCore.QSize(630, 80))
         font = QtGui.QFont()
         font.setPointSize(10)
         self.instructionLabel.setFont(font)
         self.instructionLabel.setObjectName("instructionLabel")
-        self.gridLayout.addWidget(self.instructionLabel, 1, 0, 2, 2)
-        spacerItem1 = QtWidgets.QSpacerItem(20, 18, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem1, 2, 2, 1, 1)
+        self.instructionLabel.setWordWrap(True)
+        self.gridLayout.addWidget(self.instructionLabel, 2, 0, 3, 2)
+        self.WBCImagesLabel = QtWidgets.QLabel(self.widget)
+        self.WBCImagesLabel.setObjectName("WBCImagesLabel")
+        self.gridLayout.addWidget(self.WBCImagesLabel, 2, 2, 1, 3)
+        self.captureBacImage = QtWidgets.QPushButton(self.widget)
+        font = QtGui.QFont()
+        font.setPointSize(14)
+        self.captureBacImage.setFont(font)
+        self.captureBacImage.setObjectName("captureBacImage")
+        self.gridLayout.addWidget(self.captureBacImage, 3, 2, 1, 5)
+        self.bacteriaImagesLabel = QtWidgets.QLabel(self.widget)
+        self.bacteriaImagesLabel.setObjectName("bacteriaImagesLabel")
+        self.gridLayout.addWidget(self.bacteriaImagesLabel, 4, 2, 1, 4)
         self.imageLabel = QtWidgets.QLabel(self.widget)
+        self.imageLabel.setMinimumSize(QtCore.QSize(640, 480))
         self.imageLabel.setText("")
         self.imageLabel.setPixmap(QtGui.QPixmap("../../../Downloads/placeholder.jpg"))
         self.imageLabel.setObjectName("imageLabel")
-        self.gridLayout.addWidget(self.imageLabel, 3, 0, 10, 2)
+        self.gridLayout.addWidget(self.imageLabel, 5, 0, 10, 2)
         self.resultsLabel = QtWidgets.QLabel(self.widget)
         font = QtGui.QFont()
         font.setPointSize(14)
         self.resultsLabel.setFont(font)
         self.resultsLabel.setObjectName("resultsLabel")
-        self.gridLayout.addWidget(self.resultsLabel, 3, 2, 1, 2)
-        spacerItem2 = QtWidgets.QSpacerItem(20, 18, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem2, 4, 2, 1, 1)
+        self.gridLayout.addWidget(self.resultsLabel, 5, 2, 1, 1)
+        spacerItem1 = QtWidgets.QSpacerItem(20, 48, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.gridLayout.addItem(spacerItem1, 6, 2, 1, 1)
         self.WBCcountLabel = QtWidgets.QLabel(self.widget)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.WBCcountLabel.setFont(font)
         self.WBCcountLabel.setObjectName("WBCcountLabel")
-        self.gridLayout.addWidget(self.WBCcountLabel, 5, 2, 1, 3)
-        spacerItem3 = QtWidgets.QSpacerItem(168, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem3, 5, 5, 1, 2)
+        self.gridLayout.addWidget(self.WBCcountLabel, 7, 2, 1, 2)
+        spacerItem2 = QtWidgets.QSpacerItem(148, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem2, 7, 5, 1, 3)
         self.WBCcountResult = QtWidgets.QLabel(self.widget)
+        self.WBCcountResult.setMinimumSize(QtCore.QSize(60, 20))
         font = QtGui.QFont()
         font.setPointSize(10)
         self.WBCcountResult.setFont(font)
         self.WBCcountResult.setObjectName("WBCcountResult")
-        self.gridLayout.addWidget(self.WBCcountResult, 5, 7, 1, 1)
-        spacerItem4 = QtWidgets.QSpacerItem(20, 48, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem4, 6, 3, 1, 1)
+        self.gridLayout.addWidget(self.WBCcountResult, 7, 7, 1, 1)
+        spacerItem3 = QtWidgets.QSpacerItem(20, 48, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.gridLayout.addItem(spacerItem3, 8, 3, 1, 1)
         self.polymorphLabel = QtWidgets.QLabel(self.widget)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.polymorphLabel.setFont(font)
         self.polymorphLabel.setObjectName("polymorphLabel")
-        self.gridLayout.addWidget(self.polymorphLabel, 7, 2, 1, 2)
-        spacerItem5 = QtWidgets.QSpacerItem(198, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem5, 7, 4, 1, 3)
+        self.gridLayout.addWidget(self.polymorphLabel, 9, 2, 1, 2)
+        spacerItem4 = QtWidgets.QSpacerItem(158, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem4, 9, 4, 1, 4)
         self.polymorphResult = QtWidgets.QLabel(self.widget)
+        self.polymorphResult.setMinimumSize(QtCore.QSize(60, 20))
         font = QtGui.QFont()
         font.setPointSize(10)
         self.polymorphResult.setFont(font)
         self.polymorphResult.setObjectName("polymorphResult")
-        self.gridLayout.addWidget(self.polymorphResult, 7, 7, 1, 1)
-        spacerItem6 = QtWidgets.QSpacerItem(20, 48, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem6, 8, 3, 1, 1)
+        self.gridLayout.addWidget(self.polymorphResult, 9, 7, 1, 1)
+        spacerItem5 = QtWidgets.QSpacerItem(20, 48, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.gridLayout.addItem(spacerItem5, 10, 3, 1, 1)
         self.lymphocyteLabel = QtWidgets.QLabel(self.widget)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.lymphocyteLabel.setFont(font)
         self.lymphocyteLabel.setObjectName("lymphocyteLabel")
-        self.gridLayout.addWidget(self.lymphocyteLabel, 9, 2, 1, 2)
-        spacerItem7 = QtWidgets.QSpacerItem(198, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem7, 9, 4, 1, 3)
+        self.gridLayout.addWidget(self.lymphocyteLabel, 11, 2, 1, 2)
+        spacerItem6 = QtWidgets.QSpacerItem(158, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem6, 11, 4, 1, 4)
         self.lymphocyteResult = QtWidgets.QLabel(self.widget)
+        self.lymphocyteResult.setMinimumSize(QtCore.QSize(60, 20))
         font = QtGui.QFont()
         font.setPointSize(10)
         self.lymphocyteResult.setFont(font)
         self.lymphocyteResult.setObjectName("lymphocyteResult")
-        self.gridLayout.addWidget(self.lymphocyteResult, 9, 7, 1, 1)
-        spacerItem8 = QtWidgets.QSpacerItem(20, 78, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem8, 10, 3, 1, 1)
+        self.gridLayout.addWidget(self.lymphocyteResult, 11, 7, 1, 1)
+        spacerItem7 = QtWidgets.QSpacerItem(20, 58, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.gridLayout.addItem(spacerItem7, 12, 3, 1, 1)
         self.GramStainResultLabel = QtWidgets.QLabel(self.widget)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.GramStainResultLabel.setFont(font)
         self.GramStainResultLabel.setObjectName("GramStainResultLabel")
-        self.gridLayout.addWidget(self.GramStainResultLabel, 11, 2, 1, 3)
-        spacerItem9 = QtWidgets.QSpacerItem(178, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.gridLayout.addItem(spacerItem9, 11, 5, 1, 2)
+        self.gridLayout.addWidget(self.GramStainResultLabel, 13, 2, 1, 3)
+        spacerItem8 = QtWidgets.QSpacerItem(128, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.gridLayout.addItem(spacerItem8, 13, 6, 1, 2)
         self.GramStainResultResult = QtWidgets.QLabel(self.widget)
+        self.GramStainResultResult.setMinimumSize(QtCore.QSize(60, 40))
+        self.GramStainResultResult.setWordWrap(True)
         font = QtGui.QFont()
         font.setPointSize(10)
         self.GramStainResultResult.setFont(font)
         self.GramStainResultResult.setObjectName("GramStainResultResult")
-        self.gridLayout.addWidget(self.GramStainResultResult, 11, 7, 1, 1)
-        spacerItem10 = QtWidgets.QSpacerItem(20, 68, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.gridLayout.addItem(spacerItem10, 12, 3, 1, 1)
+        self.gridLayout.addWidget(self.GramStainResultResult, 13, 7, 1, 1)
+        spacerItem9 = QtWidgets.QSpacerItem(20, 68, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
+        self.gridLayout.addItem(spacerItem9, 14, 3, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1032, 23))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1100, 23))
         self.menubar.setObjectName("menubar")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
@@ -138,21 +163,41 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
 
         self.retranslateUi(MainWindow)
-        self.startCamera.clicked.connect(self.loadImage)
-        self.captureImage.clicked.connect(self.savePhoto)
+        self.startCamera.clicked.connect(self.beginCamera)
+        self.captureWBCImage.clicked.connect(self.saveWBC)
+        self.captureBacImage.clicked.connect(self.saveBac)
         self.runAnalysis.clicked.connect(self.analyzeImage)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
         self.started = False
         self.runAnalysis.setEnabled(False)
-        self.captureImage.setEnabled(False)
+        self.captureWBCImage.setEnabled(False)
+        self.captureBacImage.setEnabled(False)
 
 
-    def loadImage(self):
+    def beginCamera(self):
         # Disable start button
         self.startCamera.setEnabled(False)
         self.started = True
-        self.captureImage.setEnabled(True)
+        self.captureWBCImage.setEnabled(True)
+
+        # Reset any counters
+        self.WBC_image_count = 0
+        self.Bac_image_count = 0
+
+        # Reset image count labels
+        self.updateWBCImages()
+        self.updateBacImages()
+
+        # Create new folder and begin folders for WBC and bac images
+        now = datetime.now()
+        current_time = now.strftime("%d_%m_%Y_%H-%M-%S")
+        self.sample_folder = 'C:/Users/12546/Rice/Coding/Image Processing/' + current_time
+        os.makedirs(self.sample_folder)
+        self.WBC_folder = self.sample_folder + '/WBC_images'
+        os.makedirs(self.WBC_folder)
+        self.bac_folder = self.sample_folder + '/bac_images'
+        os.makedirs(self.bac_folder)
 
         # Clear any past results
         self.WBCcountResult.setText('--')
@@ -174,22 +219,24 @@ class Ui_MainWindow(object):
             # Capture frame
             ret, self.image = camera.read()
 
+            self.smaller = cv2.resize(self.image, (640, 480))
+
             # Update photo
             self.setPhoto()
 
             key = cv2.waitKey(1) & 0xFF
-            if self.captureImage == True:
+            if self.captureWBCImage == True:
                 # Release the camera
                 camera.release()
                 break
 
-    
+
     def setPhoto(self):
         """ This function will take image input and resize it 
             only for display purpose and convert it to QImage
             to set at the label.
         """
-        temp = self.image
+        temp = self.smaller
         temp_mean = temp.astype(np.float32) * 1.0 / temp.mean(axis=(0,1))
         self.wb = (np.clip(temp_mean, 0, 1) * 255).astype(np.uint8)
         wb = self.wb
@@ -211,18 +258,35 @@ class Ui_MainWindow(object):
         frame = cv2.putText(wb, '20 um', origin, font,  
                         fontScale, color, thickness, cv2.LINE_AA)
         
-        # resize for displaying
-        frame = cv2.resize(frame, (640, 480))
-        
         #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
         qimage = QImage(frame, frame.shape[1],frame.shape[0],frame.strides[0],QImage.Format_RGB888)
         self.imageLabel.setPixmap(QtGui.QPixmap.fromImage(qimage))
 
 
-    def savePhoto(self):
-        # Set camera started to false
-        self.started = False
+    def saveWBC(self):
+        # Update instructions
+        self.updateInstructions('After all WBC images are captured, focus on bacteria press "Capture Bacteria Image."')
 
+        # Save whitebalanced image
+        whitebalanced = self.wb
+        now = datetime.now()
+        current_time = now.strftime("%d_%m_%Y_%H-%M-%S")
+        filename = '%s.jpg' % current_time
+        if not cv2.imwrite(os.path.join(self.WBC_folder , filename), whitebalanced):
+            raise Exception("Could not write image")
+
+        # Enable analysis to be run
+        self.captureBacImage.setEnabled(True)
+
+        # Increment image count
+        self.WBC_image_count += 1
+        self.updateWBCImages()
+
+
+    def saveBac(self):
+        # Enable start camera button
+        self.startCamera.setEnabled(True)
+    
         # Update instructions
         self.updateInstructions('Press "Run Analysis" to analyze image.')
 
@@ -231,7 +295,7 @@ class Ui_MainWindow(object):
         now = datetime.now()
         current_time = now.strftime("%d_%m_%Y_%H-%M-%S")
         filename = '%s.jpg' % current_time
-        if not cv2.imwrite(filename, whitebalanced):
+        if not cv2.imwrite(os.path.join(self.bac_folder , filename), whitebalanced):
             raise Exception("Could not write image")
 
         # Enable camera to be started again
@@ -240,13 +304,17 @@ class Ui_MainWindow(object):
         # Enable analysis to be run
         self.runAnalysis.setEnabled(True)
 
-    
+        # Increment image count
+        self.Bac_image_count += 1
+        self.updateBacImages()
+
+
     def find_regions(self, img):
         # Convert image to grayscale
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
 
         # Remove the scale bar for now (delete this line later)
-        #gray = gray[65:, :]
+        gray = gray[65:, :]
 
         # Blur to smooth edges
         blurred = cv2.GaussianBlur(gray, (7, 7), 0)
@@ -374,11 +442,6 @@ class Ui_MainWindow(object):
 
 
     def gramStatus(self, image):
-        
-        #fileName = 'WB40x_BCpos_pic7.jpg'
-        #file_image = cv2.imread(fileName)
-        
-
         # Convert image to grayscale
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (7, 7), 0)
@@ -434,44 +497,86 @@ class Ui_MainWindow(object):
         pink_char = np.sum(hist[pink_lower-90:pink_upper-90])
 
         if purple_char + pink_char < 10000:
-            bac_status = 'No organisms seen'
+            bac_status = 0
 
         elif purple_char > pink_char:
-            bac_status = 'Gram (+)'
+            bac_status = 1
 
         elif purple_char < pink_char:
-            bac_status = 'Gram (-)'
+            bac_status = 2
 
         return bac_status
     
     
     def analyzeImage(self):
+        # Turn off camera
+        self.started = False
+
         # Update instructions
-        self.updateInstructions('Running analysis, please wait...')
+        self.updateInstructions('Running analysis on WBCs, please wait...')
 
         # Disable capture image button
-        self.captureImage.setEnabled(False)
+        self.captureWBCImage.setEnabled(False)
+        self.captureBacImage.setEnabled(False)
+
+        # Initialize poly and lymph
+        poly = 0
+        lymph = 0
+
+        # Iterate through WBC images
+        folderPath = self.WBC_folder
+        #folderPath = 'C:/Users/12546/Rice/Coding/Image Processing/WBC for Analysis'
+        imageFiles = [file for file in os.listdir(folderPath) if file.endswith('.jpg')]
+        for i in range(len(imageFiles)):
+            filePath = os.path.join(folderPath, imageFiles[i])
+            image = cv2.imread(filePath)
         
-        #image = cv2.imread('WBed40x_wbcEDTA_BCpos2_pic5.jpeg')
-        image = self.wb
+            # Perform WBC count/differential
+            current_poly, current_lymph = self.WBCcount(image)
+            poly += current_poly
+            lymph += current_lymph
+
+            self.updateInstructions('Running analysis on WBCs, please wait... ({}/{})'.format(i, len(imageFiles)))
         
-        # Perform WBC count/differential
-        poly, lymph = self.WBCcount(image)
+        # Display total WBC count
         total = poly + lymph
         self.WBCcountResult.setText('{} cells'.format(total))
 
+        # Calculate differential percentages
         if total != 0:
             poly_percent = (poly / total) * 100
             lymph_percent = (lymph / total) * 100
         else:
             poly_percent = 0
             lymph_percent = 0
+
+        #Update polymorph and lymphocyte percentage labels
         self.polymorphResult.setText('{} %'.format(poly_percent))
         self.lymphocyteResult.setText('{} %'.format(lymph_percent))
+
+        # Iterate through bacteria images
+        folderPath = self.bac_folder
+        #folderPath = 'C:/Users/12546/Rice/Coding/Image Processing/Bac for Analysis'
+        imageFiles = [file for file in os.listdir(folderPath) if file.endswith('.jpg')]
+
+        # Initialize bac status list
+        bac_status_array = np.zeros(len(imageFiles))
+
+        for i in range(len(imageFiles)):
+            filePath = os.path.join(folderPath, imageFiles[i])
+            image = cv2.imread(filePath)
+            current_bac_status = self.gramStatus(image)
+            bac_status_array[i] = current_bac_status
+
+            self.updateInstructions('Running analysis on bacteria, please wait...')
         
-        # Perform bacteria search
-        bac_status = self.gramStatus(image)
-        self.GramStainResultResult.setText('{}'.format(bac_status))
+        bac_status, mode_count = stats.mode(bac_status_array)
+        if bac_status == 0:
+            self.GramStainResultResult.setText('No organisms seen')
+        elif bac_status == 1:
+            self.GramStainResultResult.setText('Gram Positive')
+        else:
+            self.GramStainResultResult.setText('Gram Negative')
 
         # Update instructions
         self.updateInstructions('Analysis complete. Press "Start Camera" to begin another sample.')
@@ -485,14 +590,30 @@ class Ui_MainWindow(object):
         self.instructionLabel.setText(instruction)
         self.instructionLabel.repaint()
 
+    
+    def updateWBCImages(self):
+        # Update WBC image count label
+        self.WBCImagesLabel.setText('{} WBC images captured'.format(self.WBC_image_count))
+        self.WBCImagesLabel.repaint()
+
+
+    def updateBacImages(self):
+        # Update bacteria image count label
+        self.bacteriaImagesLabel.setText('{} bacteria images captured'.format(self.Bac_image_count))
+        self.bacteriaImagesLabel.repaint()
+
 
     def retranslateUi(self, MainWindow):
         _translate = QtCore.QCoreApplication.translate
         MainWindow.setWindowTitle(_translate("MainWindow", "MainWindow"))
         self.startCamera.setText(_translate("MainWindow", "Start Camera"))
-        self.captureImage.setText(_translate("MainWindow", "Capture Image"))
-        self.runAnalysis.setText(_translate("MainWindow", "Run Analysis"))
+        self.captureWBCImage.setText(_translate("MainWindow", "Capture WBC Image"))
+        self.runAnalysis.setText(_translate("MainWindow", "Run \n"
+        "Analysis"))
         self.instructionLabel.setText(_translate("MainWindow", "Press \"Start Camera\" to begin viewing the live microscope image."))
+        self.WBCImagesLabel.setText(_translate("MainWindow", "0 WBC images captured"))
+        self.captureBacImage.setText(_translate("MainWindow", "Capture Bacteria Image"))
+        self.bacteriaImagesLabel.setText(_translate("MainWindow", "0 bacteria images captured"))
         self.resultsLabel.setText(_translate("MainWindow", "Results"))
         self.WBCcountLabel.setText(_translate("MainWindow", "White Cell Count"))
         self.WBCcountResult.setText(_translate("MainWindow", "--"))
@@ -511,4 +632,5 @@ if __name__ == "__main__":
     ui = Ui_MainWindow()
     ui.setupUi(MainWindow)
     MainWindow.show()
+    cv2.destroyAllWindows()
     sys.exit(app.exec_())
